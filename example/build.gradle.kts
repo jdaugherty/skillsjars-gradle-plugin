@@ -1,6 +1,6 @@
 plugins {
     java
-    id("com.skillsjars.gradle-plugin") version "0.0.2"
+    id("com.skillsjars.gradle-plugin") version "0.1.0"
 }
 
 group = "com.skillsjars.example"
