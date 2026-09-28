@@ -16,7 +16,8 @@ import kotlin.test.assertTrue
 
 /**
  * Tests for [ExtractSkillsJarsTask] verifying extraction from `skill` configuration,
- * output directory precedence, group-agnostic extraction, collision detection, and clean task behavior.
+ * output directory precedence, group-agnostic extraction, collision detection, resolution failures,
+ * and clean task behavior.
  */
 class ExtractSkillsJarsTaskTest {
 
@@ -170,6 +171,67 @@ class ExtractSkillsJarsTaskTest {
             .buildAndFail()
 
         assertTrue(result.output.contains("conflict"), "Should report path conflict")
+    }
+
+    @Test
+    fun `extract fails when a skill dependency does not resolve`() {
+        setupLocalRepo("test-skill")
+        writeSettingsFile()
+        writeBuildFile(
+            dependencies = """
+                skill("com.skillsjars:test-skill:1.0.0")
+                skill("com.skillsjars:missing-skill:1.0.0")
+            """.trimIndent()
+        )
+
+        val outputDir = File(projectDir, "output")
+
+        val result = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("extractSkillsJars", "-PoutputDir=${outputDir.absolutePath}")
+            .withPluginClasspath()
+            .buildAndFail()
+
+        assertEquals(TaskOutcome.FAILED, result.task(":extractSkillsJars")?.outcome)
+        assertTrue(
+            result.output.contains("Could not find com.skillsjars:missing-skill:1.0.0"),
+            "Should name the dependency that did not resolve"
+        )
+    }
+
+    @Test
+    fun `failed resolution keeps the skills extracted before`() {
+        setupLocalRepo("test-skill")
+        writeSettingsFile()
+        writeBuildFile(
+            dependencies = """skill("com.skillsjars:test-skill:1.0.0")"""
+        )
+
+        val outputDir = File(projectDir, "output")
+        val skillMd = File(outputDir, "skillsjars__org__repo__skill/SKILL.md")
+
+        GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("extractSkillsJars", "-PoutputDir=${outputDir.absolutePath}")
+            .withPluginClasspath()
+            .build()
+
+        assertTrue(skillMd.exists(), "SKILL.md should exist after the first extraction")
+
+        writeBuildFile(
+            dependencies = """
+                skill("com.skillsjars:test-skill:1.0.0")
+                skill("com.skillsjars:missing-skill:1.0.0")
+            """.trimIndent()
+        )
+
+        GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("extractSkillsJars", "-PoutputDir=${outputDir.absolutePath}")
+            .withPluginClasspath()
+            .buildAndFail()
+
+        assertTrue(skillMd.exists(), "SKILL.md extracted before should be kept")
     }
 
     @Test
