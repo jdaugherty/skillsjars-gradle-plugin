@@ -51,7 +51,9 @@ tasks.withType<Test> {
 }
 
 mavenPublishing {
-    publishToMavenCentral()
+    publishToMavenCentral(
+        validateDeployment = com.vanniktech.maven.publish.DeploymentValidation.PUBLISHED,
+    )
 
     signAllPublications()
 

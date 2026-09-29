@@ -27,7 +27,7 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Publish and release to Maven Central
+    - name: Publish and wait for Maven Central release
       env:
         PGP_SECRET: ${{ secrets.PGP_SECRET }}
         ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.PGP_PASSPHRASE }}
@@ -35,6 +35,12 @@ jobs:
         ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
       run: |
         set -euo pipefail
+
+        if [[ -n "$(git status --porcelain)" ]]; then
+          echo "Release checkout is dirty; refusing to publish a .dirty version." >&2
+          git status --short >&2
+          exit 1
+        fi
 
         if [[ "$PGP_SECRET" == *"-----BEGIN PGP PRIVATE KEY BLOCK-----"* ]]; then
           signing_key="$PGP_SECRET"
