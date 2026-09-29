@@ -8,6 +8,7 @@ It mirrors the behavior of the SkillsJars sbt plugin:
 - looks for skill content in `META-INF/skills/` and `META-INF/resources/skills/`
 - flattens each discovered skill root into `skillsjars__...`
 - clears the destination directory before writing
+- fails when a `skill` dependency does not resolve, leaving the destination directory as it was
 - fails on extracted path collisions
 - packages local `skills/` directories into `META-INF/skills/...`
 - validates `allowed-tools` frontmatter declarations during packaging

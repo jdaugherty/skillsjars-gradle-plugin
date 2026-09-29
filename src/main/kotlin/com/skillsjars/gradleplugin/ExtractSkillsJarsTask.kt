@@ -19,6 +19,7 @@ import java.util.jar.JarFile
  * It scans all resolved dependencies in the `skill` configuration for skill content located under
  * `META-INF/skills/` or `META-INF/resources/skills/`, flattens the skill roots into `skillsjars__<root>`,
  * clears the target directory before extraction, and checks for path collisions between dependencies.
+ * A dependency that fails to resolve fails the task before the target directory is cleared.
  */
 abstract class ExtractSkillsJarsTask : DefaultTask() {
 
@@ -40,11 +41,11 @@ abstract class ExtractSkillsJarsTask : DefaultTask() {
 
         logger.lifecycle("Extracting SkillsJars to: $outputPath")
 
-        deleteDirectory(outputPath)
-        Files.createDirectories(outputPath)
-
         val skillsJarFiles = findSkillsJars()
         logger.lifecycle("Found ${skillsJarFiles.size} SkillsJar(s)")
+
+        deleteDirectory(outputPath)
+        Files.createDirectories(outputPath)
 
         val extractedPaths = mutableMapOf<String, String>()
 
@@ -81,13 +82,9 @@ abstract class ExtractSkillsJarsTask : DefaultTask() {
         val config = project.configurations.findByName(SKILL_CONFIGURATION_NAME)
 
         if (config != null && config.isCanBeResolved) {
-            try {
-                config.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
-                    val key = "${artifact.moduleVersion.id}"
-                    result.putIfAbsent(key, artifact.file)
-                }
-            } catch (e: Exception) {
-                logger.debug("Could not resolve configuration ${config.name}: ${e.message}")
+            config.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+                val key = "${artifact.moduleVersion.id}"
+                result.putIfAbsent(key, artifact.file)
             }
         }
 
